@@ -1,0 +1,33 @@
+# Solicitar ao usuário que insira uma frase
+frase = input("Digite uma frase: ")
+
+# Aplicar os métodos de string à frase fornecida
+resultado_upper = frase.upper()
+resultado_lower = frase.lower()
+resultado_capitalize = frase.capitalize()
+resultado_strip = frase.strip()
+resultado_split = frase.split()
+resultado_join = ' '.join(resultado_split)
+resultado_isalnum = frase.isalnum()
+resultado_isalpha = frase.isalpha()
+resultado_isdigit = frase.isdigit()
+resultado_isspace = frase.isspace()
+resultado_istitle = frase.istitle()
+resultado_splitlines = frase.splitlines()
+substring = input("Digite uma substring: ")
+resultado_startswith = frase.startswith(substring)
+
+# Imprimir o resultado de cada método aplicado à frase fornecida
+print("1. Frase em maiúsculas:", resultado_upper)
+print("2. Frase em minúsculas:", resultado_lower)
+print("3. Frase capitalizada:", resultado_capitalize)
+print("4. Frase sem espaços em branco no início e no final:", resultado_strip)
+print("5. Frase dividida em palavras:", resultado_split)
+print("6. Frase juntada novamente usando espaço como separador:", resultado_join)
+print("7. A frase contém apenas caracteres alfanuméricos?", resultado_isalnum)
+print("8. A frase contém apenas letras?", resultado_isalpha)
+print("9. A frase contém apenas dígitos?", resultado_isdigit)
+print("10. A frase contém apenas espaços em branco?", resultado_isspace)
+print("11. A frase está capitalizada corretamente?", resultado_istitle)
+print("12. Frase dividida em linhas separadas:", resultado_splitlines)
+print("13. A frase começa com a substring fornecida?", resultado_startswith)
