@@ -1,74 +1,30 @@
-from UDPClient import UDPClient
 import json
+from Mensagem import Message
+from UDPClient import UDPClient
 
 
 class Proxy:
-    """
-    Lida com as requisições com o cliente
-
-    Colocar os objetos de requisição em JSON e depois chamar as funções no lado do UDPCLIENTE pra enviar 
-    """
     def __init__(self, hostname, port):
-        self.request_id = 0  # Inicializa o ID das requisições
+        self.request_id = 0
         self.client = UDPClient(hostname, port)
-        self.is_connected = False
 
-    def conectar_servidor(self):
-        try:
-            response = self.client.receber_requisicao()
-            if response:
-                self.is_connected = True
-                print("Conexão com o servidor estabelecida.")
-            else:
-                print("Erro ao conectar com o servidor.")
-        except Exception as e:
-            print(f"Erro ao tentar conectar: {e}")
-            self.is_connected = False
-
-    def iniciar(self): #
-        self.conectar_servidor()
-        if not self.is_connected:
-            print("Não foi possível conectar ao servidor. O cliente não pode entrar no menu.")
-            return
-
-        while True:
-            escolha = input("Escolha uma opção: ")
-            if escolha == "1":
-                self.verificar_ticket()
-            elif escolha == "2":
-                self.reservar_ticket()
-            elif escolha == "3":
-                self.atualizar_ticket()
-            elif escolha == "4":
-                self.cancelar_ticket()
-            elif escolha == "5":
-                self.consultar_reserva()
-            elif escolha == "6":
-                self.buscar_historico()
-            elif escolha == "7":
-                self.close()
-                break
-            else:
-                print("Opção inválida. Tente novamente.")
-
-
-    def doOperation(self, acao, params=None):
-        # Incrementa o request_id a cada operação
+    def doOperation(self, args, params=None):
         self.request_id += 1
 
         if params is not None:
             # Cria a mensagem de requisição
-            message = {
-                "messageType": 0,  # 0 = Requisição
-                "requestId": self.request_id,
-                "acao": acao,
-                "arguments": params
-            }
-            # Serializa a mensagem em JSON
-            return json.dumps(message)
+            message = Message(args)
+            message.setMessageType(0)  # 0 = Requisição
+            message.setRequestId(self.request_id)
+            message.setArguments(params)
+
+            return message.to_json()  # Já gera uma string JSON
         else:
             # Processa a resposta
-            message = json.loads(acao)  # Desserializa a resposta em JSON
+            if isinstance(args, str):
+                message = json.loads(args)  # Desserializa a resposta se for string JSON
+            else:
+                message = args  # Se já for um dicionário, usa diretamente
 
             if message["messageType"] == 1:  # 1 = Resposta
                 arguments = message["arguments"]
@@ -81,47 +37,38 @@ class Proxy:
                         return None
                 else:
                     arguments_json = arguments
-                
-                # Verifica se houve sucesso na operação
-                response = {
-                    "result": arguments_json,
-                    "status": message.get("status", "sem status")
-                }
+
+                response = arguments_json
                 return response
             return None
 
-    def verificar_ticket(self, ticket_id, cpf):
-        requisicao = self.doOperation("consultar_reserva", {
-            "ticket_id": ticket_id,
-            "cpf": cpf
-        })
-        self.client.enviar_solicitacao(requisicao)
-        resposta = self.client.receber_requisicao()
-        return self.doOperation(resposta)
 
-    def reservar_ticket(self, cpf, nome, data, hora, origem, destino, poltrona):
+
+
+    def reservar_ticket(self,cpf, nome, data, hora, origem, destino, poltrona):
         requisicao = self.doOperation("reservar_ticket", {
             "cpf": cpf,
+            "nome": nome,
             "data": data,
             "hora": hora,
             "origem": origem,
             "destino": destino,
-            "nome": nome,
+
             "poltrona": poltrona
         })
         self.client.enviar_solicitacao(requisicao)
         resposta = self.client.receber_requisicao()
         return self.doOperation(resposta)
 
-    def atualizar_ticket(self, ticket_id, cpf, data, hora, origem, destino, nome, poltrona):
+    def atualizar_ticket(self, ticket_id, cpf ,nome, data, hora, origem, destino,  poltrona):
         requisicao = self.doOperation("atualizar_reserva", {
-            "ticket_id": ticket_id,
+            "ticketId": ticket_id,
             "cpf": cpf,
+            "nome": nome,
             "data": data,
             "hora": hora,
             "origem": origem,
             "destino": destino,
-            "nome": nome,
             "poltrona": poltrona
         })
         self.client.enviar_solicitacao(requisicao)
@@ -129,8 +76,8 @@ class Proxy:
         return self.doOperation(resposta)
 
     def cancelar_ticket(self, ticket_id):
-        requisicao = self.doOperation("cancelar_ticket", {
-            "ticket_id": ticket_id
+        requisicao = self.doOperation("cancelar_reserva", {
+            "ticketId": ticket_id
         })
         self.client.enviar_solicitacao(requisicao)
         resposta = self.client.receber_requisicao()
@@ -145,7 +92,7 @@ class Proxy:
         return self.doOperation(resposta)
 
     def buscar_historico(self):
-        requisicao = self.doOperation("consultar_histórico")
+        requisicao = self.doOperation("consultar_historico", {})
         self.client.enviar_solicitacao(requisicao)
         resposta = self.client.receber_requisicao()
         return self.doOperation(resposta)
