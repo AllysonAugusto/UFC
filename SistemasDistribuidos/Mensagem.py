@@ -1,36 +1,45 @@
-import json 
+import json
 
-class Mensagem:
-    def __init__(self, json_obj=None):
-        if json_obj:
-            self.messageType = json_obj.get("tipoMensagem", None)
-            self.id_metodo = json_obj.get("methodId", None)
-            self.argumento = json_obj.get("argumentos", {})
-        else:
-            print("Erro: JSON não foi definido")
+class Message:
+    def __init__(self, methodId=None):
+        self.messageType = None
+        self.requestId = None
+        self.methodId = methodId
+        self.arguments = None
 
-    def para_json(self):
+    def setMessageType(self, messageType):
+        self.messageType = messageType
+
+    def setRequestId(self, requestId):
+        self.requestId = requestId
+
+    def setMethodId(self, methodId):
+        self.methodId = methodId
+
+    def setArguments(self, arguments):
+        self.arguments = arguments
+
+    def getMessageType(self):
+        return self.messageType
+
+    def getParams(self):
+        return self.arguments
+
+    def to_json(self):
+        """Converte o objeto Message para uma string JSON."""
         return json.dumps({
-            "tipoMensagem": self.messageType,
-            "methodId": self.id_metodo,
-            "argumentos": self.argumento,
+            "messageType": self.messageType,
+            "requestId": self.requestId,
+            "methodId": self.methodId,
+            "arguments": self.arguments
         })
 
     @staticmethod
-    def para_objeto(json_string):
-        json_obj = json.loads(json_string)
-        return Mensagem(json_obj)
-
-# JSON corrigido
-json_data = '{"tipoMensagem": 1, "methodId": "metodo1", "argumentos": {"arg1": "valor1"}}'
-
-# Json -> objeto
-mensagem = Mensagem.para_objeto(json_data)
-
-# Acessando os atributos do objeto
-print(mensagem.messageType)  # Saída: 1
-print(mensagem.id_metodo)    # Saída: metodo1
-print(mensagem.argumento)    # Saída: {'arg1': 'valor1'}
-
-# objeto -> json
-print(mensagem.para_json())  # Converte de volta para JSON
+    def from_json(json_str):
+        """Cria um objeto Message a partir de uma string JSON."""
+        data = json.loads(json_str)
+        msg = Message(data["methodId"])
+        msg.setMessageType(data["messageType"])
+        msg.setRequestId(data["requestId"])
+        msg.setArguments(data["arguments"])
+        return msg
