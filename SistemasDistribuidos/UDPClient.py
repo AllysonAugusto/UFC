@@ -1,84 +1,75 @@
 import socket
 import json
-import Mensagem
 
 class UDPClient:
-
     """
-    Envia os dados para o server e recebe as respostas.Foi implementado tanto erro de rede (timeout) quanto socket
-    __init__: inicializa o socket com porta e endereço
-    enviar_solicitação: pegar o socket para enviar dados serelializados para o servidor
-    receber_solicitação: recebe respostas do server
+    Envia os dados para o servidor e recebe as respostas. Implementa tanto erro de rede (timeout) quanto socket.
+    __init__: inicializa o socket com porta e endereço.
+    enviar_solicitacao: envia dados serializados para o servidor.
+    receber_requisicao: recebe respostas do servidor.
     """
 
-    def __init__ (self, hostname, port, timeout = 5, max_retransmissao = 3):
+    def __init__(self, hostname, port, timeout=1, max_retransmissao=3):  # Timeout reduzido para testes
         self.endereco_servidor = (hostname, port)
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.timeout = timeout
         self.max_retransmissao = max_retransmissao
         self.socket.settimeout(self.timeout)
-
+        self.requisicao = None
 
     def enviar_solicitacao(self, requisicao):
-
         try:
-
-            self.socket.sendto(requisicao.para_json().encode(), self.endereco_servidor)
-            
-            resposta_json = self.client.receber_requisicao()
-
-            # retorna a mensagem (objeto)
-            return Mensagem.para_objeto(resposta_json)
-
-        except socket.error as erro:
-            print(f"erro no envio da solicitacao: {erro}")
-
-        except socket.timeout:
-            print("erro por exceder o timeout")
-
+            # Envia a mensagem como bytes após serialização
+            self.socket.sendto(requisicao.encode('utf-8'), self.endereco_servidor)
+            self.requisicao = requisicao
+            #print(f"Requisição enviada: {requisicao}")
+        except Exception as e:
+            print(f"Falha ao enviar a requisição: {e}")
 
     def receber_requisicao(self):
-
-        """
-        Recebendo dados do servidor e decodificando os dados recebidos de bytes para string
-        Pega a string JSON para dicionario em py
-        
-        """
-
         tentativas = 0
 
-        while tentativas <= self.max_retransmissao:
+        while tentativas < self.max_retransmissao:
             try:
-                dados_recebidos, endereco = self.socket.recvfrom(4096)
-                resposta = json.loads(dados_recebidos.decode('utf-8'))
-                return resposta
-            
-            except socket.timeout:
-                print("Tempo da conexão foi esgotado ao esperar pela resposta")
-                tentativas += 1
-            except socket.error as erro:
-                print("Erro ao receber a resposta: {erro}")
-        
-        print("Numero maximo de tentativas.Nao foi possivel estabelecer resposta com o servidor")
-        print(f"Numero de tentativas: {tentativas}")
 
+                dados_recebidos, endereco = self.socket.recvfrom(512)
+                resposta = json.loads(dados_recebidos.decode('utf-8'))
+
+                return resposta
+            except socket.timeout:
+                tentativas += 1
+                # Reenvia a solicitação em caso de timeout
+                print(f"Tentativa {tentativas + 1}: Reenviando a solicitação...")
+                self.enviar_solicitacao(self.requisicao)
+            except socket.error as erro:
+                print(f"UDPClient: Erro ao receber a resposta: {erro}")
+                tentativas += 1  # Incrementa tentativas mesmo em caso de erro
+                # Reenvia a solicitação em caso de erro
+                print(f"Tentativa {tentativas + 1}: Reenviando a solicitação após erro...")
+                self.enviar_solicitacao(self.requisicao)
+
+        print("Número máximo de tentativas alcançado. Não foi possível estabelecer resposta com o servidor.")
+        return None
 
     def close(self):
         self.socket.close()
+        print("Conexão fechada!")
 
+def main():
+    hostname = 'localhost'  # Substitua pelo endereço do servidor
+    port = 9876  # Substitua pela porta do servidor
+    requisicao = json.dumps({"mensagem": "Olá, servidor!"})  # Exemplo de requisição
 
-if __name__ == "__main__":
-    client = UDPClient('localhost', 8448)
-
-    mensagem = Mensagem({
-
-    "tipoMensagem": 1,
-    "methoId": "metodo1",
-    "arguments": {"arg1": "valor1"}
-
-    })
-
-    resposta = client.enviar_solicitacao(mensagem)
+    cliente = UDPClient(hostname, port)
+    cliente.enviar_solicitacao(requisicao)
+    resposta = cliente.receber_requisicao()
 
     if resposta:
-        print("Resposta recebida", resposta)
+        print("Resposta do servidor:", resposta)
+    else:
+        print("Não foi possível obter uma resposta do servidor.")
+
+    cliente.close()
+
+if __name__ == "__main__":
+    main()
